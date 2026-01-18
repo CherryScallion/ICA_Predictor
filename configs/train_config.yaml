@@ -1,0 +1,53 @@
+# configs/train_config.yaml
+
+paths:
+  raw_h5_dir: "./data/H5" 
+  processed_dir: "./data/processed"
+  template_dir: "./data/templates"
+  optimized_h5_dir: "./data/optimized_h5"  # 训练用优化后的H5数据（包含weights）
+
+data_specs:
+  tr: 2.0
+  # 修改：必须匹配你的数据 fmri.shape[1:] -> (Depth, H, W)
+  voxel_resolution: [30, 64, 64] 
+  n_ica_components: 64
+  eeg_freq_bins: 64
+  
+  h5_key_fmri: "fmri" 
+  h5_key_eeg: "eeg"
+  
+  activation_threshold: 1.0
+  
+  # 修改：针对预分段数据 (Feature Maps)，我们可能每次只读入 1 帧或 3 帧
+  # 如果 eeg[i] 已经包含了一个 TR 内的所有时间点(249点)，我们这里 history 设为 1 即可
+  # 并在 DataLoader 里不进行额外的时间切片，直接一对一加载
+  history_frames: 1 
+  delay_frames: 2     # fMRI 滞后 2 TR (4秒)
+
+training:
+  # ===== GPU 设置 =====
+  device: "cuda"      # "auto" (自动), "cuda" (强制GPU), "cpu" (强制CPU)
+  
+  # ===== 训练超参数 =====
+  num_epochs: 50
+  batch_size: 64       # 平衡GPU显存和数据加载效率
+  learning_rate: 1.0e-4
+  weight_decay: 1.0e-5
+  
+  # ===== 优化器设置 =====
+  optimizer: "AdamW"  # AdamW 或 Adam
+  beta1: 0.9
+  beta2: 0.999
+  epsilon: 1.0e-8
+  
+  # ===== 梯度裁剪 =====
+  gradient_clip_norm: 1.0
+  
+  # ===== Loss 函数权重 =====
+  regression_loss_weight: 1.0
+  cosine_loss_weight: 0.5
+  
+  # ===== 其他 =====
+  num_workers: 0      # DataLoader worker 数量 (H5不支持multiprocessing，必须0)
+  lazy_load: false     # 是否启用lazy loading (true=按需加载，节省内存)
+  checkpoint_interval: 5  # 每N个epoch保存一次checkpoint
